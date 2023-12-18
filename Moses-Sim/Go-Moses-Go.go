@@ -30,68 +30,51 @@ type Grid [height][width]Cell
 
 // Initialize the grid with Moses and followers
 func (g *Grid) Initialize() {
-	// Place followers starting from the first column
 	followerCount := 0
+	// Calculate the start row for followers to be centered vertically behind Moses
+	startRow := height/2 - 2 // This is the row for "I1"
+
 	for i := 0; i < 5; i++ {
 		for j := 0; j < 10; j++ {
 			followerCount++
-			g[height/2-2+i][j].Type = "I"
-			g[height/2-2+i][j].Index = followerCount
+			g[startRow+i][j].Type = "I"
+			g[startRow+i][j].Index = followerCount
 		}
 	}
-	// Place Moses 1 column ahead of the followers
-	g[height/2][10].Type = "M"
+	// Place Moses ahead of the followers, on the same row as the middle follower
+	g[startRow+2][10].Type = "M" // Moses is placed 10 columns away from the 0th column
 }
 
 // Display prints the current state of the grid
-func (g *Grid) Display() {
-	// Calculate the vertical alignment of the labels
-	egyptAlignment := height/2 - 2  // Adjust if needed to align "Y" with Moses' path
-	israelAlignment := height/2 - 1 // Adjust if needed to align "R" with Moses' path
+func (g *Grid) Display(year int) {
+	egyptLabel := "EGYPT"
 
-	// Display the grid cells with "EGYPT" and "ISRAEL" labels
+	// Calculate the row index for "Y" to be in line with Moses' path
+	yRowIndex := height/2 - 1
+
+	// Print the current year above the grid
+	fmt.Printf("Year %d:\n", year)
+
+	// Print the grid
 	for i := 0; i < height; i++ {
-		// "EGYPT" label
-		if i == egyptAlignment {
-			fmt.Print("E ")
-		} else if i == egyptAlignment+1 {
-			fmt.Print("G ")
-		} else if i == egyptAlignment+2 {
-			fmt.Print("Y ")
-		} else if i == egyptAlignment+3 {
-			fmt.Print("P ")
-		} else if i == egyptAlignment+4 {
-			fmt.Print("T ")
+		// Print the EGYPT label vertically on the left side
+		if i >= yRowIndex-1 && i <= yRowIndex+3 {
+			fmt.Printf("%c ", egyptLabel[i-yRowIndex+1])
 		} else {
-			fmt.Print("  ")
+			fmt.Print("  ") // Add spacing to align the grid properly
 		}
 
-		// Grid cells
+		// Print the grid cells
 		for j := 0; j < width; j++ {
 			cell := g[i][j]
-			if cell.Type == "I" {
-				fmt.Printf("%s%d ", cell.Type, cell.Index)
+			if cell.Type == "I" && cell.Index > 0 {
+				fmt.Printf("%s%d ", cell.Type, cell.Index) // Print followers with index
 			} else {
-				fmt.Printf("%s  ", cell.Type)
+				fmt.Printf("%s  ", cell.Type) // Print empty cells or Moses
 			}
 		}
 
-		// "ISRAEL" label
-		if i == israelAlignment {
-			fmt.Print(" I")
-		} else if i == israelAlignment+1 {
-			fmt.Print(" S")
-		} else if i == israelAlignment+2 {
-			fmt.Print(" R")
-		} else if i == israelAlignment+3 {
-			fmt.Print(" A")
-		} else if i == israelAlignment+4 {
-			fmt.Print(" E")
-		} else if i == israelAlignment+5 {
-			fmt.Print(" L")
-		}
-
-		// End the line
+		// Print a newline at the end of each grid row
 		fmt.Println()
 	}
 }
@@ -103,7 +86,8 @@ func (g *Grid) MoveMoses() {
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			if g[y][x].Type == "M" {
-				if x+1 < width {
+				// Check if Moses is at the second to last column, stop him from moving further
+				if x < width-len("ISRAEL")-2 {
 					g[y][x+1].Type = "M"
 					g[y][x].Type = " "
 				}
@@ -230,12 +214,13 @@ func main() {
 
 	var grid Grid
 	grid.Initialize()
-	grid.Display()
+	grid.Display(0) // Display initial state of the grid with year 0
 
-	for turn := 0; turn < 40; turn++ {
-		time.Sleep(500 * time.Millisecond)
-		fmt.Printf("Year %d:\n", turn+1)
-		grid.NextTurn()
-		grid.Display()
+	for turn := 1; turn <= 40; turn++ {
+		time.Sleep(750 * time.Millisecond) // Pause between turns for visibility
+		grid.MoveMoses()                   // Move Moses one step to the right
+		grid.MoveFollowers()               // Move followers according to the rules
+		grid.ApplyRules()                  // Apply rules for thirst and village formation
+		grid.Display(turn)                 // Display state of the grid with the current year
 	}
 }
