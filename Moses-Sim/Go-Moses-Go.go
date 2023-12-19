@@ -9,8 +9,11 @@ import (
 // Section 1: Constants for Grid and Agents
 
 const (
-	width  = 51 // Adjusted for 40 spaces + Moses + 10 for followers
-	height = 25 // Adjustable as needed
+	width             = 51 // Adjusted for 40 spaces + Moses + 10 for followers
+	height            = 20 // Adjustable as needed
+	followMosesChance = 70
+	turnsForThirst    = 2
+	turnsForVillage   = 5
 )
 
 // FollowerState holds additional state information for a follower
@@ -42,7 +45,7 @@ func (g *Grid) Initialize() {
 		}
 	}
 	// Place Moses ahead of the followers, on the same row as the middle follower
-	g[startRow+2][10].Type = "M" // Moses is placed 10 columns away from the 0th column
+	g[startRow+2][10].Type = "M" // Moses is placed 10 columns away from 0th column
 }
 
 // Display prints the current state of the grid
@@ -99,23 +102,37 @@ func (g *Grid) MoveMoses() {
 
 // MoveFollowers handles the movement of each follower
 func (g *Grid) MoveFollowers() {
+	rand.Seed(time.Now().UnixNano())
+
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			if g[y][x].Type == "I" {
-				newY, newX := y, x
-				if rand.Intn(2) == 0 { // 50% chance to move in the same direction as Moses
-					newX++
-				} else {
-					// Random movement including diagonal
-					newY += rand.Intn(3) - 1 // -1, 0, or 1
-					newX += rand.Intn(3) - 1 // -1, 0, or 1
-				}
+			cell := &g[y][x]
+			if cell.Type == "I" {
+				for move := 0; move < 2; move++ { // Allow two moves per turn
+					direction := rand.Intn(100)
+					moveTowardsMoses := direction < followMosesChance
+					var newY, newX int
 
-				// Check boundaries and occupancy
-				if newY >= 0 && newY < height && newX >= 0 && newX < width && g[newY][newX].Type == " " {
-					g[newY][newX] = g[y][x]
-					g[y][x].Type = " "
-					g[y][x].Index = 0
+					if moveTowardsMoses {
+						// Move in the same direction as Moses
+						newX = x + 1
+						newY = y
+					} else {
+						// Move in a random direction
+						newY = y + rand.Intn(3) - 1 // -1, 0, or 1
+						newX = x + rand.Intn(3) - 1 // -1, 0, or 1
+					}
+
+					// Check boundaries and occupancy
+					if newY >= 0 && newY < height && newX >= 0 && newX < width && g[newY][newX].Type == " " {
+						// Perform the move
+						g[newY][newX] = *cell
+						cell.Type = " "
+						cell.Index = 0
+						// Update the current position for the next move
+						x = newX
+						y = newY
+					}
 				}
 			}
 		}
@@ -158,41 +175,59 @@ func abs(x int) int {
 // Part 3 continues from the previous code
 
 // ApplyRules applies the rules for thirst and village formation
+// ApplyRules applies the rules for thirst and village formation
 func (g *Grid) ApplyRules() {
+	// Apply thirst and village formation rules
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			cell := &g[y][x]
 			if cell.Type == "I" {
 				distance := g.DistanceFromMoses(y, x)
+				adjacentFollowers := g.CheckAdjacentFollowers(y, x)
 
 				// Update distance counter
-				if distance > 10 {
+				if distance >= 10 {
 					cell.FollowerInfo.DistanceCounter++
 				} else {
 					cell.FollowerInfo.DistanceCounter = 0
 				}
 
-				// Check for thirst condition
-				if cell.FollowerInfo.DistanceCounter >= 2 {
-					cell.Type = "D"
+				// Check for followers dying of thirst
+				if cell.FollowerInfo.DistanceCounter >= turnsForThirst && adjacentFollowers <= 2 {
+					cell.Type = "D" // Follower dies of thirst
 				}
 
 				// Check for village formation
-				if cell.FollowerInfo.DistanceCounter >= 10 && g.CheckAdjacentFollowers(y, x) >= 3 {
-					cell.Type = "V"
+				if cell.FollowerInfo.DistanceCounter >= turnsForVillage && adjacentFollowers >= 3 {
+					// Make sure all adjacent followers are also more than 10 spaces away for 2 turns
+					allQualifyForVillage := true
+					for dy := -1; dy <= 1; dy++ {
+						for dx := -1; dx <= 1; dx++ {
+							if !(dy == 0 && dx == 0) && y+dy >= 0 && y+dy < height && x+dx >= 0 && x+dx < width {
+								adjCell := &g[y+dy][x+dx]
+								if adjCell.Type == "I" && adjCell.FollowerInfo.DistanceCounter < 2 {
+									allQualifyForVillage = false
+								}
+							}
+						}
+					}
+
+					if allQualifyForVillage {
+						cell.Type = "V" // Followers form a village
+					}
 				}
 			}
 		}
 	}
 }
 
-// CheckAdjacentFollowers counts adjacent followers
+// CheckAdjacentFollowers counts the adjacent followers
 func (g *Grid) CheckAdjacentFollowers(y, x int) int {
 	count := 0
-	for i := -1; i <= 1; i++ {
-		for j := -1; j <= 1; j++ {
-			if !(i == 0 && j == 0) && y+i >= 0 && y+i < height && x+j >= 0 && x+j < width {
-				if g[y+i][x+j].Type == "I" {
+	for dy := -1; dy <= 1; dy++ {
+		for dx := -1; dx <= 1; dx++ {
+			if !(dy == 0 && dx == 0) && y+dy >= 0 && y+dy < height && x+dx >= 0 && x+dx < width {
+				if g[y+dy][x+dx].Type == "I" {
 					count++
 				}
 			}
@@ -223,4 +258,16 @@ func main() {
 		grid.ApplyRules()                  // Apply rules for thirst and village formation
 		grid.Display(turn)                 // Display state of the grid with the current year
 	}
+	fmt.Println("       *                ")
+	fmt.Println("      ***          __   ")
+	fmt.Println("     *****       _|==|_ ")
+	fmt.Println("    *******       ('')_/")
+	fmt.Println("   *********  >--(`^^') ")
+	fmt.Println("  ***********   (`^'^'`)")
+	fmt.Println("     |||||      `======'")
+	fmt.Println(" ")
+	fmt.Println(" ")
+	// Print the Merry Christmas message
+	fmt.Println("Merry Christmas to Jae, Manfred, and quite literally the rest of the company from Michael, the whole Gnoland team, and everyone else working on quant tasks & tokenomics with us.")
+	fmt.Println("Genuinely, thank you everyone for everything you do.")
 }
