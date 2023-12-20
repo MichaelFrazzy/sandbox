@@ -172,9 +172,6 @@ func abs(x int) int {
 
 // Section 3: Apply Rules and Logic
 
-// Part 3 continues from the previous code
-
-// ApplyRules applies the rules for thirst and village formation
 // ApplyRules applies the rules for thirst and village formation
 func (g *Grid) ApplyRules() {
 	// Apply thirst and village formation rules
