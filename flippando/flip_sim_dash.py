@@ -15,10 +15,10 @@ initial_r = 0.01  # Player growth rate
 initial_daily_active_percentage = 0.1  # Average active % of users
 
 # FLIP and NFT Parameters
-initial_flip_supply = 10000  # Starting available FLIP supply (unlocked for the sake of simulation realism)
-initial_locked_flip = 5000  # Starting Locked FLIP within basic NFTs (for realism)
-initial_basic_nfts = {'4x4': 100, '8x8': 50}  # Starting total basic NFTs created by type (for realism)
-initial_complex_nfts = 0  # Starting total complex NFTs created (for realism)
+initial_flip_supply = 10000  # Starting available FLIP supply
+initial_locked_flip = 5000  # Starting Locked FLIP within basic NFTs 
+initial_basic_nfts = {'4x4': 100, '8x8': 50}  # Starting total basic NFTs created by type
+initial_complex_nfts = 0  # Starting total complex NFTs created 
 
 # Complex NFT Creation Parameters
 initial_complex_nft_creation_percentage = 0.005  # Percentage of players who create complex NFTs each day
